@@ -14,19 +14,19 @@ gates = ["Hữu Nghị", "Lào Cai", "Móng Cái", "Tân Thanh"]
 gate_info = {
     "Hữu Nghị": {
         "mieu_ta": "Cửa khẩu Quốc tế Hữu Nghị (Lạng Sơn) là điểm nối quan trọng trên hành lang kinh tế Nam Ninh - Lạng Sơn - Hà Nội. Thế mạnh lớn nhất là xuất nhập khẩu máy móc, thiết bị và xuất khẩu trái cây chính ngạch.",
-        "anh_url": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80" 
+        "anh_url": "https://i.postimg.cc/x1y6R5mN/Huu-Nghi.jpg" 
     },
     "Lào Cai": {
         "mieu_ta": "Cửa khẩu Quốc tế Kim Thành (Lào Cai) đóng vai trò chiến lược kết nối với tỉnh Vân Nam (Trung Quốc). Nổi bật với khả năng thông quan hàng nông sản nhanh chóng và hệ thống đường cao tốc nối liền thủ đô.",
-        "anh_url": "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80" 
+        "anh_url": "https://i.postimg.cc/jSQMXcfz/Lao-Cai.png" 
     },
     "Móng Cái": {
         "mieu_ta": "Cửa khẩu Quốc tế Móng Cái (Quảng Ninh) sở hữu lợi thế to lớn về giao thương đường bộ lẫn đường biển. Khu vực này đang được đầu tư mạnh mẽ về hạ tầng logistics và hệ thống kho bãi hiện đại.",
-        "anh_url": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80" 
+        "anh_url": "https://i.postimg.cc/dVm5B6Cr/Mong-Cai.jpg" 
     },
     "Tân Thanh": {
         "mieu_ta": "Cửa khẩu phụ Tân Thanh (Lạng Sơn) là trung tâm giao thương hàng nông sản, trái cây lớn nhất biên giới phía Bắc. Lượng xe tải đổ về đây vào mùa vụ có thể lên tới hàng nghìn xe mỗi ngày.",
-        "anh_url": "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?auto=format&fit=crop&w=800&q=80" 
+        "anh_url": "https://i.postimg.cc/nhY3k2m4/Tan-Thanh.jpg" 
     }
 }
 
