@@ -7,31 +7,25 @@ import os
 # --- CẤU HÌNH TRANG ---
 st.set_page_config(page_title="Đánh giá Logistics", layout="wide")
 
-# Thư mục lưu ảnh (Nếu bạn dùng link online thì không cần quan tâm phần này)
-ASSETS_DIR = "assets/portraits"
-os.makedirs(ASSETS_DIR, exist_ok=True)
-
 # Kết nối Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
-
 gates = ["Hữu Nghị", "Lào Cai", "Móng Cái", "Tân Thanh"]
 
-# --- HÀM ĐỌC DỮ LIỆU (ĐÃ SỬA LỖI GHI ĐÈ) ---
+# --- HÀM ĐỌC DỮ LIỆU ---
 def get_all_data():
     try:
-        # SỬA LỖI: Đổi ttl="5m" thành ttl=0 để luôn lấy dữ liệu mới nhất, không bị lưu bộ nhớ tạm
         return conn.read(worksheet="Sheet1", ttl=0)
     except:
-        return pd.DataFrame(columns=["Gate", "XNK", "Xe", "KCN", "ThongQuan", "Timestamp"])
+        return pd.DataFrame(columns=["Gate", "XNK", "Xe", "KCN", "ThongQuan", "Diem_Danh_Gia", "Timestamp"])
 
-# --- CƠ SỞ DỮ LIỆU ẢNH ---
+# --- CƠ SỞ DỮ LIỆU ẢNH (Giữ nguyên tính năng ảnh) ---
 gate_info = {
     "Hữu Nghị": {
         "mieu_ta": "Cửa khẩu Quốc tế Hữu Nghị (Lạng Sơn) là điểm nối quan trọng trên hành lang kinh tế Nam Ninh - Lạng Sơn - Hà Nội.",
         "anh_url": "https://i.postimg.cc/x1y6R5mN/Huu-Nghi.jpg" 
     },
     "Lào Cai": {
-        "mieu_ta": "Cửa khẩu Quốc tế Lào Cai (Lào Cai) đóng vai trò chiến lược kết nối với tỉnh Vân Nam (Trung Quốc).",
+        "mieu_ta": "Cửa khẩu Quốc tế Kim Thành (Lào Cai) đóng vai trò chiến lược kết nối với tỉnh Vân Nam (Trung Quốc).",
         "anh_url": "https://i.postimg.cc/jSQMXcfz/Lao-Cai.png" 
     },
     "Móng Cái": {
@@ -78,45 +72,70 @@ if menu == "Người Đánh Giá":
         kcn = c3.number_input("KCN (ha)", value=defaults[selected_gate][2], min_value=0.0, step=1.0)
         tq = c4.number_input("Thông quan (h)", value=defaults[selected_gate][3], min_value=0.0, step=1.0)
             
-        submit = st.form_submit_button("Gửi đánh giá cửa khẩu này")
+        submit = st.form_submit_button("Gửi đánh giá & Xem điểm")
         
         if submit:
-            new_record = {
-                "Gate": selected_gate, 
-                "XNK": xnk, 
-                "Xe": xe, 
-                "KCN": kcn, 
-                "ThongQuan": tq, 
-                "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
-            
-            # XÓA BỘ NHỚ TẠM TRƯỚC KHI GHI ĐỂ KHÔNG BỊ GHI ĐÈ
             st.cache_data.clear() 
+            df_old = get_all_data()
             
-            existing_data = get_all_data()
-            new_data = pd.DataFrame([new_record])
-            updated_df = pd.concat([existing_data, new_data], ignore_index=True)
+            # Tính toán Min-Max tức thì cho Evaluator
+            new_record = {"Gate": selected_gate, "XNK": xnk, "Xe": xe, "KCN": kcn, "ThongQuan": tq}
+            df_temp = pd.concat([df_old, pd.DataFrame([new_record])], ignore_index=True)
             
-            # Ghi lên Sheet
+            for col in ["XNK", "Xe", "KCN", "ThongQuan"]:
+                df_temp[col] = pd.to_numeric(df_temp[col], errors='coerce').fillna(0)
+                
+            def calc_norm(col, val, inverse=False):
+                c_min = df_temp[col].min()
+                c_max = df_temp[col].max()
+                if c_max == c_min: return 1.0
+                if inverse: return (c_max - val) / (c_max - c_min)
+                return (val - c_min) / (c_max - c_min)
+
+            norm_xnk = calc_norm("XNK", xnk)
+            norm_xe = calc_norm("Xe", xe)
+            norm_kcn = calc_norm("KCN", kcn)
+            norm_tq = calc_norm("ThongQuan", tq, True)
+            
+            # Trọng số tiêu chuẩn (40-20-20-20) cho điểm cá nhân
+            current_score = (norm_xnk*0.4 + norm_xe*0.2 + norm_kcn*0.2 + norm_tq*0.2) * 100
+            current_score = round(current_score, 1)
+            
+            # Bắn pháo hoa và hiện điểm
+            st.balloons()
+            st.success(f"🎉 **Đã ghi nhận! Điểm tiềm năng bạn vừa đánh giá cho {selected_gate} là: {current_score} / 100 điểm**")
+            
+            # Lưu vào Sheet kèm Timestamp
+            new_record["Diem_Danh_Gia"] = current_score
+            new_record["Timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            updated_df = pd.concat([df_old, pd.DataFrame([new_record])], ignore_index=True)
             conn.update(worksheet="Sheet1", data=updated_df)
-            st.success(f"✅ Đã ghi nhận thành công! Bạn có thể tiếp tục đánh giá lần nữa.")
 
 # ==========================================
-# TAB 2: QUẢN TRỊ VIÊN (ADMIN) - TÍNH ĐIỂM
+# TAB 2: QUẢN TRỊ VIÊN (ADMIN) 
 # ==========================================
 elif menu == "Quản Trị Viên (Admin)":
     pwd = st.sidebar.text_input("Mật khẩu Admin:", type="password")
-    if pwd == "NCKH2026":
-        st.header("Báo cáo Leaderboard (Thang điểm 100)")
+    if pwd == "admin123":
+        st.header("Báo cáo Leaderboard Tổng Hợp")
         
-        # Lấy dữ liệu mới nhất
         df = get_all_data()
         
         if df.empty or len(df) == 0:
             st.info("Chưa có dữ liệu nào trong Google Sheet.")
         else:
-            # 1. BẢNG ĐIỀU KHIỂN TRỌNG SỐ
-            st.subheader("Cài đặt Trọng số (%)")
+            # HIỂN THỊ ĐIỂM TRUNG BÌNH CÁ NHÂN TỪ SHEET (CỘT DIEM_DANH_GIA)
+            st.subheader("1. Điểm Trung Bình Khách Quan (Từ các lượt đánh giá)")
+            df['Diem_Danh_Gia'] = pd.to_numeric(df['Diem_Danh_Gia'], errors='coerce')
+            avg_scores = df.groupby('Gate')['Diem_Danh_Gia'].mean().round(1).reset_index()
+            st.bar_chart(data=avg_scores.set_index('Gate')['Diem_Danh_Gia'])
+            
+            st.markdown("---")
+            
+            # GIỮ NGUYÊN QUYỀN NĂNG SLIDER CỦA ADMIN
+            st.subheader("2. Mô phỏng Chiến lược Admin (Điều chỉnh trọng số)")
+            st.write("Bảng dưới đây tính toán lại bảng xếp hạng dựa trên dữ liệu thô và trọng số mới của bạn.")
             c1, c2, c3, c4 = st.columns(4)
             w_xnk = c1.slider("XNK (%)", 0, 100, 40)
             w_xe = c2.slider("Xe (%)", 0, 100, 20)
@@ -126,15 +145,11 @@ elif menu == "Quản Trị Viên (Admin)":
             if (w_xnk + w_xe + w_kcn + w_tq) != 100:
                 st.error("Tổng trọng số phải bằng đúng 100%!")
             else:
-                # 2. THUẬT TOÁN TÍNH TRUNG BÌNH & CHUẨN HÓA
-                # Bước A: Tính số liệu trung bình của từng cửa khẩu từ TẤT CẢ các lượt đánh giá
-                # Ép kiểu dữ liệu về số thực (float) để tránh lỗi tính toán
                 for col in ["XNK", "Xe", "KCN", "ThongQuan"]:
                     df[col] = pd.to_numeric(df[col], errors='coerce')
                 
                 df_avg = df.groupby('Gate')[["XNK", "Xe", "KCN", "ThongQuan"]].mean().reset_index()
                 
-                # Bổ sung các cửa khẩu chưa có ai đánh giá (để biểu đồ không bị khuyết)
                 for gate in gates:
                     if gate not in df_avg['Gate'].values:
                         df_avg.loc[len(df_avg)] = [gate, 0, 0, 0, 0]
@@ -142,7 +157,6 @@ elif menu == "Quản Trị Viên (Admin)":
                 df_norm = pd.DataFrame()
                 df_norm['Gate'] = df_avg['Gate']
                 
-                # Bước B: Chuẩn hóa Min-Max Thuận (XNK, Xe, KCN)
                 for col in ["XNK", "Xe", "KCN"]:
                     min_val = df_avg[col].min()
                     max_val = df_avg[col].max()
@@ -151,7 +165,6 @@ elif menu == "Quản Trị Viên (Admin)":
                     else:
                         df_norm[col] = (df_avg[col] - min_val) / (max_val - min_val)
                         
-                # Bước C: Chuẩn hóa Min-Max Nghịch (Thời gian thông quan - càng nhỏ càng tốt)
                 col = "ThongQuan"
                 min_val = df_avg[col].min()
                 max_val = df_avg[col].max()
@@ -160,26 +173,12 @@ elif menu == "Quản Trị Viên (Admin)":
                 else:
                     df_norm[col] = (max_val - df_avg[col]) / (max_val - min_val)
                 
-                # Bước D: Nhân trọng số tính điểm Tổng (Thang 100)
-                df_norm['Điểm Đánh Giá'] = (
-                    df_norm['XNK'] * (w_xnk/100) +
-                    df_norm['Xe'] * (w_xe/100) +
-                    df_norm['KCN'] * (w_kcn/100) +
-                    df_norm['ThongQuan'] * (w_tq/100)
+                df_norm['Điểm Mô Phỏng'] = (
+                    df_norm['XNK'] * (w_xnk/100) + df_norm['Xe'] * (w_xe/100) +
+                    df_norm['KCN'] * (w_kcn/100) + df_norm['ThongQuan'] * (w_tq/100)
                 ) * 100
                 
-                # Làm tròn 1 chữ số thập phân (VD: 68.2)
-                df_norm['Điểm Đánh Giá'] = df_norm['Điểm Đánh Giá'].round(1)
-                
-                # 3. HIỂN THỊ BIỂU ĐỒ LEADERBOARD
-                st.markdown("### 🏆 Bảng Xếp Hạng Tiềm Năng (Leaderboard)")
-                
-                # Sắp xếp lại thứ tự cột cho đúng với list gates ban đầu
+                df_norm['Điểm Mô Phỏng'] = df_norm['Điểm Mô Phỏng'].round(1)
                 df_norm = df_norm.set_index('Gate').reindex(gates).reset_index()
                 
-                # Vẽ biểu đồ cột
-                st.bar_chart(data=df_norm.set_index('Gate')['Điểm Đánh Giá'])
-                
-                # Hiển thị bảng số liệu chi tiết
-                st.markdown("### 📊 Dữ liệu trung bình các lượt đánh giá")
-                st.dataframe(df_avg.set_index('Gate').round(1))
+                st.bar_chart(data=df_norm.set_index('Gate')['Điểm Mô Phỏng'])
