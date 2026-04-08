@@ -26,35 +26,49 @@ menu = st.sidebar.radio("Vai trò:", ["Người Đánh Giá", "Quản Trị Viê
 
 if menu == "Người Đánh Giá":
     st.header("Nhập số liệu thực tế")
+    st.write("Bạn có thể chọn đánh giá một cửa khẩu cụ thể. Các cửa khẩu khác sẽ không bị ảnh hưởng.")
+    
+    # Dữ liệu mặc định để mồi sẵn cho người dùng đỡ phải gõ từ số 0
+    defaults = {
+        "Hữu Nghị": [3000.0, 730, 815.0, 72.0],
+        "Lào Cai": [1800.0, 300, 1084.0, 96.0],
+        "Móng Cái": [4000.0, 300, 182.0, 60.0],
+        "Tân Thanh": [1500.0, 600, 150.0, 48.0]
+    }
     
     with st.form("form_danh_gia"):
-        # Tạo bảng nhập liệu
-        inputs = []
-        for gate in gates:
-            st.markdown(f"### Cửa khẩu {gate}")
-            c1, c2, c3, c4 = st.columns(4)
-            xnk = c1.number_input(f"XNK (Tr.USD) - {gate}", min_value=0.0, step=10.0, key=f"x_{gate}")
-            xe = c2.number_input(f"Số xe/ngày - {gate}", min_value=0, step=1, key=f"v_{gate}")
-            kcn = c3.number_input(f"KCN (ha) - {gate}", min_value=0.0, step=1.0, key=f"k_{gate}")
-            tq = c4.number_input(f"Thông quan (h) - {gate}", min_value=0.0, step=1.0, key=f"t_{gate}")
+        # Cho phép người dùng CHỌN 1 cửa khẩu thay vì nhập cả 4
+        selected_gate = st.selectbox("📌 Chọn cửa khẩu bạn muốn đánh giá:", gates)
+        
+        st.markdown("---")
+        c1, c2, c3, c4 = st.columns(4)
+        
+        # Tự động điền số gợi ý dựa trên cửa khẩu đã chọn
+        xnk = c1.number_input("XNK (Tr.USD)", value=defaults[selected_gate][0], min_value=0.0, step=10.0)
+        xe = c2.number_input("Số xe/ngày", value=defaults[selected_gate][1], min_value=0, step=1)
+        kcn = c3.number_input("KCN (ha)", value=defaults[selected_gate][2], min_value=0.0, step=1.0)
+        tq = c4.number_input("Thông quan (h)", value=defaults[selected_gate][3], min_value=0.0, step=1.0)
             
-            inputs.append({
-                "Gate": gate, "XNK": xnk, "Xe": xe, 
-                "KCN": kcn, "ThongQuan": tq, 
-                "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            })
-            
-        submit = st.form_submit_button("Gửi dữ liệu lên Google Sheet")
+        submit = st.form_submit_button("Gửi đánh giá cửa khẩu này")
         
         if submit:
-            # Lấy dữ liệu cũ, thêm dữ liệu mới và cập nhật lại Sheet
+            # Chỉ tạo 1 bản ghi (1 dòng) duy nhất cho cửa khẩu được chọn
+            new_record = {
+                "Gate": selected_gate, 
+                "XNK": xnk, 
+                "Xe": xe, 
+                "KCN": kcn, 
+                "ThongQuan": tq, 
+                "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            
             existing_data = get_all_data()
-            new_data = pd.DataFrame(inputs)
+            new_data = pd.DataFrame([new_record])
             updated_df = pd.concat([existing_data, new_data], ignore_index=True)
             
-            # Ghi đè lại vào Google Sheet
+            # Ghi lên Google Sheet
             conn.update(data=updated_df)
-            st.success("✅ Dữ liệu đã được lưu trực tiếp vào Google Sheet của bạn!")
+            st.success(f"✅ Đã ghi nhận thành công dữ liệu cho cửa khẩu {selected_gate}! Các cửa khẩu khác không bị ảnh hưởng.")
 
 elif menu == "Quản Trị Viên (Admin)":
     pwd = st.sidebar.text_input("Mật khẩu Admin:", type="password")
