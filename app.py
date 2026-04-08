@@ -117,7 +117,7 @@ if menu == "Người Đánh Giá":
 # ==========================================
 elif menu == "Quản Trị Viên (Admin)":
     pwd = st.sidebar.text_input("Mật khẩu Admin:", type="password")
-    if pwd == "admin123":
+    if pwd == "NCKH2026":
         st.header("Báo cáo Leaderboard Tổng Hợp")
         
         df = get_all_data()
