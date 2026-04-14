@@ -6,179 +6,214 @@ import os
 
 # --- CẤU HÌNH TRANG ---
 st.set_page_config(page_title="Đánh giá Logistics", layout="wide")
-
-# Kết nối Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 gates = ["Hữu Nghị", "Lào Cai", "Móng Cái", "Tân Thanh"]
 
-# --- HÀM ĐỌC DỮ LIỆU ---
+# 15 Chỉ số định lượng
+COLUMNS = [
+    "Gate", "XNK", "KhoiLuong", "Xe", "MuaVu", "KCN", "DanSo", "NongNghiep", 
+    "CaoToc", "DuongSat", "DaPhuongThuc", "ThongQuan", "PhoiHop", "DN_Log", "KhoLanh", "HaTangHoTro", 
+    "Diem_Danh_Gia", "Timestamp"
+]
+
 def get_all_data():
     try:
         return conn.read(worksheet="Sheet1", ttl=0)
     except:
-        return pd.DataFrame(columns=["Gate", "XNK", "Xe", "KCN", "ThongQuan", "Diem_Danh_Gia", "Timestamp"])
+        return pd.DataFrame(columns=COLUMNS)
 
-# --- CƠ SỞ DỮ LIỆU ẢNH (Giữ nguyên tính năng ảnh) ---
+# --- CƠ SỞ DỮ LIỆU ẢNH ---
 gate_info = {
-    "Hữu Nghị": {
-        "mieu_ta": "Cửa khẩu Quốc tế Hữu Nghị (Lạng Sơn) là điểm nối quan trọng trên hành lang kinh tế Nam Ninh - Lạng Sơn - Hà Nội.",
-        "anh_url": "https://i.postimg.cc/x1y6R5mN/Huu-Nghi.jpg" 
-    },
-    "Lào Cai": {
-        "mieu_ta": "Cửa khẩu Quốc tế Kim Thành (Lào Cai) đóng vai trò chiến lược kết nối với tỉnh Vân Nam (Trung Quốc).",
-        "anh_url": "https://i.postimg.cc/jSQMXcfz/Lao-Cai.png" 
-    },
-    "Móng Cái": {
-        "mieu_ta": "Cửa khẩu Quốc tế Móng Cái (Quảng Ninh) sở hữu lợi thế to lớn về giao thương đường bộ lẫn đường biển.",
-        "anh_url": "https://i.postimg.cc/dVm5B6Cr/Mong-Cai.jpg" 
-    },
-    "Tân Thanh": {
-        "mieu_ta": "Cửa khẩu phụ Tân Thanh (Lạng Sơn) là trung tâm giao thương hàng nông sản, trái cây lớn nhất biên giới phía Bắc.",
-        "anh_url": "https://i.postimg.cc/nhY3k2m4/Tan-Thanh.jpg" 
-    }
+    "Hữu Nghị": {"mieu_ta": "Cửa khẩu Quốc tế Hữu Nghị (Lạng Sơn)...", "anh_url": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80"},
+    "Lào Cai": {"mieu_ta": "Cửa khẩu Quốc tế Kim Thành (Lào Cai)...", "anh_url": "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80"},
+    "Móng Cái": {"mieu_ta": "Cửa khẩu Quốc tế Móng Cái (Quảng Ninh)...", "anh_url": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80"},
+    "Tân Thanh": {"mieu_ta": "Cửa khẩu phụ Tân Thanh (Lạng Sơn)...", "anh_url": "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?auto=format&fit=crop&w=800&q=80"}
 }
 
-st.title("Hệ thống Đánh giá Tiềm năng Logistics Cửa khẩu")
+st.title("Hệ thống Đánh giá 15 Chỉ số Logistics Cửa khẩu")
 menu = st.sidebar.radio("Vai trò:", ["Người Đánh Giá", "Quản Trị Viên (Admin)"])
 
 # ==========================================
 # TAB 1: NGƯỜI ĐÁNH GIÁ (EVALUATOR)
 # ==========================================
 if menu == "Người Đánh Giá":
-    st.header("Nhập số liệu thực tế")
+    st.header("Thu thập Dữ liệu & Đánh giá Tức thì")
     
-    selected_gate = st.selectbox("📌 Chọn cửa khẩu bạn muốn đánh giá:", gates)
+    selected_gate = st.selectbox("📌 Chọn cửa khẩu đánh giá:", gates)
     
-    st.markdown("---")
+    # 1. PHẦN GIỚI THIỆU CỬA KHẨU & ẢNH
     col_img, col_text = st.columns([1, 2])
-    with col_img:
-        st.image(gate_info[selected_gate]["anh_url"], use_container_width=True)
+    with col_img: st.image(gate_info[selected_gate]["anh_url"], use_container_width=True)
     with col_text:
-        st.subheader(f"Thông tin: Cửa khẩu {selected_gate}")
+        st.subheader(f"Cửa khẩu {selected_gate}")
         st.write(gate_info[selected_gate]["mieu_ta"])
-    st.markdown("---")
     
-    defaults = {
-        "Hữu Nghị": [3000.0, 730, 815.0, 72.0],
-        "Lào Cai": [1800.0, 300, 1084.0, 96.0],
-        "Móng Cái": [4000.0, 300, 182.0, 60.0],
-        "Tân Thanh": [1500.0, 600, 150.0, 48.0]
-    }
-    
-    with st.form("form_danh_gia", clear_on_submit=True):
-        c1, c2, c3, c4 = st.columns(4)
-        xnk = c1.number_input("XNK (Tr.USD)", value=defaults[selected_gate][0], min_value=0.0, step=10.0)
-        xe = c2.number_input("Số xe/ngày", value=defaults[selected_gate][1], min_value=0, step=1)
-        kcn = c3.number_input("KCN (ha)", value=defaults[selected_gate][2], min_value=0.0, step=1.0)
-        tq = c4.number_input("Thông quan (h)", value=defaults[selected_gate][3], min_value=0.0, step=1.0)
+    # 2. PHẦN GIỚI THIỆU ĐỊNH NGHĨA 15 CHỈ SỐ (Dành cho Evaluator đọc)
+    with st.expander("📖 XEM HƯỚNG DẪN & ĐỊNH NGHĨA 15 CHỈ SỐ (Click để mở rộng)"):
+        st.markdown("""
+        **I. Dòng hàng (Trade Flow)**
+        - **Kim ngạch XNK (USD):** Tổng xuất + nhập. 
+        - **Khối lượng (Tấn):** Tổng tấn hàng qua cửa khẩu.
+        - **Số xe/ngày:** Lưu lượng xe chở hàng trung bình.
+        - **Độ mùa vụ (0-1):** 1 = Ổn định quanh năm; 0 = Tập trung cao điểm.
+        
+        **II. Hậu phương kinh tế (Hinterland)**
+        - **Diện tích KCN (ha):** Tổng diện tích KCN chính vùng ảnh hưởng.
+        - **Dân số (Triệu người):** Dân số bán kính 100-150km.
+        - **Nông nghiệp (Điểm):** Quy mô hàng nông sản vùng lân cận.
+        
+        **III. Kết nối hạ tầng (Connectivity)**
+        - **Đường cao tốc/QL (km):** Chiều dài đường đến vùng kinh tế.
+        - **Đường sắt (km):** Đường sắt nối trực tiếp.
+        - **Đa phương thức (0-1):** Có ICD, cảng biển hỗ trợ (1=Có, 0=Không).
+        
+        **IV. Thể chế & Quản lý (Institutional)**
+        - **Thời gian thông quan (giờ):** Càng nhỏ càng tốt.
+        - **Cơ chế phối hợp (0-1):** Một cửa, kiểm dịch chung (1=Có, 0=Không).
+        
+        **V. Hệ sinh thái (Ecosystem)**
+        - **Số DN Logistics:** Số DN dịch vụ trên địa bàn.
+        - **Kho lạnh (Tấn):** Tổng công suất kho lạnh.
+        - **Hạ tầng hỗ trợ (0-1):** Bãi trung chuyển, kho ngoại quan (1=Có, 0=Không).
+        """)
+
+    # 3. FORM NHẬP LIỆU & TÍNH ĐIỂM TỪNG LƯỢT
+    with st.form("form_15_criteria", clear_on_submit=True):
+        st.write("### Nhập liệu các chỉ số định lượng")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.markdown("**1. Dòng hàng**")
+            xnk = st.number_input("Kim ngạch XNK (Tr.USD)", value=1000.0)
+            kl = st.number_input("Khối lượng (Nghìn tấn)", value=500.0)
+            xe = st.number_input("Số xe/ngày", value=300)
+            muavu = st.slider("Độ mùa vụ (0-1)", 0.0, 1.0, 0.8)
+            st.markdown("**4. Thể chế**")
+            tq = st.number_input("TG Thông quan (Giờ)", value=48.0)
+            phoihop = st.selectbox("Cơ chế một cửa (1=Có, 0=Không)", [1, 0])
+        with c2:
+            st.markdown("**2. Hậu phương**")
+            kcn = st.number_input("Diện tích KCN (ha)", value=200.0)
+            danso = st.number_input("Dân số (Triệu người)", value=2.0)
+            nongnghiep = st.number_input("SL Nông nghiệp (Điểm)", value=50.0)
+            st.markdown("**5. Hệ sinh thái**")
+            dnlog = st.number_input("Số DN Logistics", value=20)
+            kholanh = st.number_input("CS Kho lạnh (Tấn)", value=1000.0)
+            hatang = st.selectbox("Hạ tầng ICD (1=Có, 0=Không)", [1, 0])
+        with c3:
+            st.markdown("**3. Kết nối hạ tầng**")
+            caotoc = st.number_input("Cao tốc/QL (km)", value=150.0)
+            duongsat = st.number_input("Đường sắt (km)", value=0.0)
+            daphuongthuc = st.selectbox("Đa Phương Thức (1=Có, 0=Không)", [1, 0])
             
-        submit = st.form_submit_button("Gửi đánh giá & Xem điểm")
+        submit = st.form_submit_button("Gửi đánh giá & Tính điểm")
         
         if submit:
             st.cache_data.clear() 
             df_old = get_all_data()
             
-            # Tính toán Min-Max tức thì cho Evaluator
-            new_record = {"Gate": selected_gate, "XNK": xnk, "Xe": xe, "KCN": kcn, "ThongQuan": tq}
+            new_record = {
+                "Gate": selected_gate, "XNK": xnk, "KhoiLuong": kl, "Xe": xe, "MuaVu": muavu,
+                "KCN": kcn, "DanSo": danso, "NongNghiep": nongnghiep, 
+                "CaoToc": caotoc, "DuongSat": duongsat, "DaPhuongThuc": daphuongthuc,
+                "ThongQuan": tq, "PhoiHop": phoihop, "DN_Log": dnlog, "KhoLanh": kholanh, "HaTangHoTro": hatang
+            }
+            
             df_temp = pd.concat([df_old, pd.DataFrame([new_record])], ignore_index=True)
+            for col in COLUMNS[1:16]: df_temp[col] = pd.to_numeric(df_temp[col], errors='coerce').fillna(0)
             
-            for col in ["XNK", "Xe", "KCN", "ThongQuan"]:
-                df_temp[col] = pd.to_numeric(df_temp[col], errors='coerce').fillna(0)
-                
-            def calc_norm(col, val, inverse=False):
-                c_min = df_temp[col].min()
-                c_max = df_temp[col].max()
+            # Hàm chuẩn hóa
+            def norm(col, val, inv=False):
+                c_min, c_max = df_temp[col].min(), df_temp[col].max()
                 if c_max == c_min: return 1.0
-                if inverse: return (c_max - val) / (c_max - c_min)
-                return (val - c_min) / (c_max - c_min)
+                return (c_max - val)/(c_max - c_min) if inv else (val - c_min)/(c_max - c_min)
 
-            norm_xnk = calc_norm("XNK", xnk)
-            norm_xe = calc_norm("Xe", xe)
-            norm_kcn = calc_norm("KCN", kcn)
-            norm_tq = calc_norm("ThongQuan", tq, True)
+            # Trọng số mặc định của Admin (Dùng để báo điểm tức thì cho Evaluator)
+            W_BASE = {"XNK":0.12, "KhoiLuong":0.08, "Xe":0.10, "MuaVu":0.05, "KCN":0.10, "DanSo":0.05, "NongNghiep":0.05, "CaoToc":0.08, "DuongSat":0.07, "DaPhuongThuc":0.05, "ThongQuan":0.10, "PhoiHop":0.03, "DN_Log":0.07, "KhoLanh":0.05, "HaTangHoTro":0.05}
             
-            # Trọng số tiêu chuẩn (40-20-20-20) cho điểm cá nhân
-            current_score = (norm_xnk*0.4 + norm_xe*0.2 + norm_kcn*0.2 + norm_tq*0.2) * 100
-            current_score = round(current_score, 1)
+            score = 0
+            for key, weight in W_BASE.items():
+                is_inverse = True if key == "ThongQuan" else False
+                score += norm(key, new_record[key], is_inverse) * weight
             
-            # Bắn pháo hoa và hiện điểm
-            st.balloons()
-            st.success(f"🎉 **Đã ghi nhận! Điểm tiềm năng bạn vừa đánh giá cho {selected_gate} là: {current_score} / 100 điểm**")
-            
-            # Lưu vào Sheet kèm Timestamp
-            new_record["Diem_Danh_Gia"] = current_score
+            final_score = round(score * 100, 1)
+            new_record["Diem_Danh_Gia"] = final_score
             new_record["Timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
             updated_df = pd.concat([df_old, pd.DataFrame([new_record])], ignore_index=True)
             conn.update(worksheet="Sheet1", data=updated_df)
+            st.balloons()
+            st.success(f"🎉 Xuất sắc! Điểm của {selected_gate} ở lượt đánh giá này là: {final_score}/100 điểm")
 
 # ==========================================
 # TAB 2: QUẢN TRỊ VIÊN (ADMIN) 
 # ==========================================
 elif menu == "Quản Trị Viên (Admin)":
-    pwd = st.sidebar.text_input("Mật khẩu Admin:", type="password")
-    if pwd == "NCKH2026":
-        st.header("Báo cáo Leaderboard Tổng Hợp")
-        
+    pwd = st.sidebar.text_input("Mật khẩu:", type="password")
+    if pwd == "admin123":
+        st.header("Báo cáo Trung bình & Mô phỏng")
         df = get_all_data()
         
-        if df.empty or len(df) == 0:
-            st.info("Chưa có dữ liệu nào trong Google Sheet.")
-        else:
-            # HIỂN THỊ ĐIỂM TRUNG BÌNH CÁ NHÂN TỪ SHEET (CỘT DIEM_DANH_GIA)
-            st.subheader("1. Điểm Trung Bình Khách Quan (Từ các lượt đánh giá)")
+        if not df.empty and "Diem_Danh_Gia" in df.columns:
+            # 1. TÍNH ĐIỂM TRUNG BÌNH CÁC LƯỢT ĐÁNH GIÁ
+            st.subheader("1. Điểm Trung Bình Khách Quan (Thực tế)")
             df['Diem_Danh_Gia'] = pd.to_numeric(df['Diem_Danh_Gia'], errors='coerce')
             avg_scores = df.groupby('Gate')['Diem_Danh_Gia'].mean().round(1).reset_index()
             st.bar_chart(data=avg_scores.set_index('Gate')['Diem_Danh_Gia'])
             
             st.markdown("---")
             
-            # GIỮ NGUYÊN QUYỀN NĂNG SLIDER CỦA ADMIN
-            st.subheader("2. Mô phỏng Chiến lược Admin (Điều chỉnh trọng số)")
-            st.write("Bảng dưới đây tính toán lại bảng xếp hạng dựa trên dữ liệu thô và trọng số mới của bạn.")
-            c1, c2, c3, c4 = st.columns(4)
-            w_xnk = c1.slider("XNK (%)", 0, 100, 40)
-            w_xe = c2.slider("Xe (%)", 0, 100, 20)
-            w_kcn = c3.slider("KCN (%)", 0, 100, 20)
-            w_tq = c4.slider("Thông quan (%)", 0, 100, 20)
+            # 2. MÔ PHỎNG VỚI 15 TRỌNG SỐ
+            st.subheader("2. Khung Mô phỏng Chiến lược (Admin)")
+            st.write("Kéo thanh trượt để thay đổi trọng số. Hệ thống tự động quy đổi tỷ lệ nếu tổng khác 100%.")
             
-            if (w_xnk + w_xe + w_kcn + w_tq) != 100:
-                st.error("Tổng trọng số phải bằng đúng 100%!")
-            else:
-                for col in ["XNK", "Xe", "KCN", "ThongQuan"]:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-                
-                df_avg = df.groupby('Gate')[["XNK", "Xe", "KCN", "ThongQuan"]].mean().reset_index()
-                
-                for gate in gates:
-                    if gate not in df_avg['Gate'].values:
-                        df_avg.loc[len(df_avg)] = [gate, 0, 0, 0, 0]
-                
-                df_norm = pd.DataFrame()
-                df_norm['Gate'] = df_avg['Gate']
-                
-                for col in ["XNK", "Xe", "KCN"]:
-                    min_val = df_avg[col].min()
-                    max_val = df_avg[col].max()
-                    if max_val == min_val:
-                        df_norm[col] = 0 if max_val == 0 else 1.0
-                    else:
-                        df_norm[col] = (df_avg[col] - min_val) / (max_val - min_val)
-                        
-                col = "ThongQuan"
-                min_val = df_avg[col].min()
-                max_val = df_avg[col].max()
+            w = {}
+            tabs = st.tabs(["Dòng hàng", "Hậu phương", "Kết nối", "Thể chế", "Sinh thái"])
+            with tabs[0]:
+                w['XNK'] = st.slider("XNK (%)", 0, 50, 12)
+                w['KhoiLuong'] = st.slider("Khối lượng (%)", 0, 50, 8)
+                w['Xe'] = st.slider("Số xe (%)", 0, 50, 10)
+                w['MuaVu'] = st.slider("Mùa vụ (%)", 0, 50, 5)
+            with tabs[1]:
+                w['KCN'] = st.slider("KCN (%)", 0, 50, 10)
+                w['DanSo'] = st.slider("Dân số (%)", 0, 50, 5)
+                w['NongNghiep'] = st.slider("Nông nghiệp (%)", 0, 50, 5)
+            with tabs[2]:
+                w['CaoToc'] = st.slider("Cao tốc (%)", 0, 50, 8)
+                w['DuongSat'] = st.slider("Đường sắt (%)", 0, 50, 7)
+                w['DaPhuongThuc'] = st.slider("Đa phương thức (%)", 0, 50, 5)
+            with tabs[3]:
+                w['ThongQuan'] = st.slider("Thông quan (%)", 0, 50, 10)
+                w['PhoiHop'] = st.slider("Phối hợp (%)", 0, 50, 3)
+            with tabs[4]:
+                w['DN_Log'] = st.slider("DN Logistics (%)", 0, 50, 7)
+                w['KhoLanh'] = st.slider("Kho lạnh (%)", 0, 50, 5)
+                w['HaTangHoTro'] = st.slider("Hạ tầng hỗ trợ (%)", 0, 50, 5)
+
+            # Auto-normalize weights
+            total_w = sum(w.values())
+            if total_w == 0: total_w = 1 
+            
+            for col in COLUMNS[1:16]:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            df_avg = df.groupby('Gate')[COLUMNS[1:16]].mean().reset_index()
+            for gate in gates:
+                if gate not in df_avg['Gate'].values:
+                    df_avg.loc[len(df_avg)] = [gate] + [0]*15
+                    
+            df_norm = pd.DataFrame({'Gate': df_avg['Gate']})
+            for col in COLUMNS[1:16]:
+                min_val, max_val = df_avg[col].min(), df_avg[col].max()
                 if max_val == min_val:
-                    df_norm[col] = 0 if max_val == 0 else 1.0
+                    df_norm[col] = 1.0
                 else:
-                    df_norm[col] = (max_val - df_avg[col]) / (max_val - min_val)
-                
-                df_norm['Điểm Mô Phỏng'] = (
-                    df_norm['XNK'] * (w_xnk/100) + df_norm['Xe'] * (w_xe/100) +
-                    df_norm['KCN'] * (w_kcn/100) + df_norm['ThongQuan'] * (w_tq/100)
-                ) * 100
-                
-                df_norm['Điểm Mô Phỏng'] = df_norm['Điểm Mô Phỏng'].round(1)
-                df_norm = df_norm.set_index('Gate').reindex(gates).reset_index()
-                
-                st.bar_chart(data=df_norm.set_index('Gate')['Điểm Mô Phỏng'])
+                    df_norm[col] = (max_val - df_avg[col]) / (max_val - min_val) if col == "ThongQuan" else (df_avg[col] - min_val) / (max_val - min_val)
+            
+            # Tính điểm với trọng số đã quy đổi
+            df_norm['Điểm Mô Phỏng'] = 0
+            for col in COLUMNS[1:16]:
+                df_norm['Điểm Mô Phỏng'] += df_norm[col] * (w[col] / total_w)
+            df_norm['Điểm Mô Phỏng'] = (df_norm['Điểm Mô Phỏng'] * 100).round(1)
+            
+            df_norm = df_norm.set_index('Gate').reindex(gates).reset_index()
+            st.bar_chart(data=df_norm.set_index('Gate')['Điểm Mô Phỏng'])
