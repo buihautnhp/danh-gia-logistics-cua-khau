@@ -37,10 +37,10 @@ BOUNDS_CONFIG = {
 
 # --- CƠ SỞ DỮ LIỆU ẢNH ---
 gate_info = {
-    "Hữu Nghị": {"mieu_ta": "Cửa khẩu Quốc tế Hữu Nghị (Lạng Sơn)...", "anh_url": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80"},
-    "Lào Cai": {"mieu_ta": "Cửa khẩu Quốc tế Kim Thành (Lào Cai)...", "anh_url": "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80"},
-    "Móng Cái": {"mieu_ta": "Cửa khẩu Quốc tế Móng Cái (Quảng Ninh)...", "anh_url": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80"},
-    "Tân Thanh": {"mieu_ta": "Cửa khẩu phụ Tân Thanh (Lạng Sơn)...", "anh_url": "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?auto=format&fit=crop&w=800&q=80"}
+    "Hữu Nghị": {"mieu_ta": "Cửa khẩu Quốc tế Hữu Nghị (Lạng Sơn)...", "anh_url": "https://i.postimg.cc/x1y6R5mN/Huu-Nghi.jpg"},
+    "Lào Cai": {"mieu_ta": "Cửa khẩu Quốc tế Kim Thành (Lào Cai)...", "anh_url": "https://i.postimg.cc/jSQMXcfz/Lao-Cai.png"},
+    "Móng Cái": {"mieu_ta": "Cửa khẩu Quốc tế Móng Cái (Quảng Ninh)...", "anh_url": "https://i.postimg.cc/dVm5B6Cr/Mong-Cai.jpg"},
+    "Tân Thanh": {"mieu_ta": "Cửa khẩu phụ Tân Thanh (Lạng Sơn)...", "anh_url": "https://i.postimg.cc/nhY3k2m4/Tan-Thanh.jpg"}
 }
 
 st.title("Hệ thống Đánh giá 15 Chỉ số Logistics Cửa khẩu")
