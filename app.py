@@ -22,18 +22,19 @@ def get_all_data():
     except:
         return pd.DataFrame(columns=COLUMNS)
 
-#==================================
-# --- CẤU HÌNH MIN-MAX LAI (HYBRID BOUNDS) ---
-# Quy tắc: (Min_Cố_định, Max_Cố_định). Dùng chữ None nếu muốn quét động từ Google Sheet
-#==================================
+# ==========================================
+# CẤU HÌNH MIN-MAX LAI (HYBRID BOUNDS)
+# (Min, Max). Dùng None nếu muốn hệ thống tự quét trên Google Sheet
+# ==========================================
 BOUNDS_CONFIG = {
     "DanSo": (1.5, 5.0),          # Cố định cả Min và Max
     "HaTangHoTro": (0, 1),        # Cố định cả Min và Max
     "PhoiHop": (0, 1),            # Cố định cả Min và Max
     "DaPhuongThuc": (0, 1),       # Cố định cả Min và Max
     "MuaVu": (0.0, 1.0),          # Cố định cả Min và Max
-    "ThongQuan": (24.0, None)     # Cố định Min 24h, Max để None (Hệ thống tự quét)
+    "ThongQuan": (24.0, None)     # Cố định Min 24h, Max tự quét từ Sheet
 }
+
 # --- CƠ SỞ DỮ LIỆU ẢNH ---
 gate_info = {
     "Hữu Nghị": {"mieu_ta": "Cửa khẩu Quốc tế Hữu Nghị (Lạng Sơn)...", "anh_url": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80"},
@@ -53,14 +54,12 @@ if menu == "Người Đánh Giá":
     
     selected_gate = st.selectbox("📌 Chọn cửa khẩu đánh giá:", gates)
     
-    # 1. PHẦN GIỚI THIỆU CỬA KHẨU & ẢNH
     col_img, col_text = st.columns([1, 2])
     with col_img: st.image(gate_info[selected_gate]["anh_url"], use_container_width=True)
     with col_text:
         st.subheader(f"Cửa khẩu {selected_gate}")
         st.write(gate_info[selected_gate]["mieu_ta"])
     
-    # 2. PHẦN GIỚI THIỆU ĐỊNH NGHĨA 15 CHỈ SỐ (Dành cho Evaluator đọc)
     with st.expander("📖 XEM HƯỚNG DẪN & ĐỊNH NGHĨA 15 CHỈ SỐ (Click để mở rộng)"):
         st.markdown("""
         **I. Dòng hàng (Trade Flow)**
@@ -89,7 +88,6 @@ if menu == "Người Đánh Giá":
         - **Hạ tầng hỗ trợ (0-1):** Bãi trung chuyển, kho ngoại quan (1=Có, 0=Không).
         """)
 
-    # 3. FORM NHẬP LIỆU & TÍNH ĐIỂM TỪNG LƯỢT
     with st.form("form_15_criteria", clear_on_submit=True):
         st.write("### Nhập liệu các chỉ số định lượng")
         c1, c2, c3 = st.columns(3)
@@ -133,19 +131,39 @@ if menu == "Người Đánh Giá":
             df_temp = pd.concat([df_old, pd.DataFrame([new_record])], ignore_index=True)
             for col in COLUMNS[1:16]: df_temp[col] = pd.to_numeric(df_temp[col], errors='coerce').fillna(0)
             
-            # Hàm chuẩn hóa
+            # --- HÀM CHUẨN HÓA LAI (HYBRID) CHO NGƯỜI ĐÁNH GIÁ ---
             def norm(col, val, inv=False):
+                # 1. Quét Min-Max động từ Sheet làm mặc định
                 c_min, c_max = df_temp[col].min(), df_temp[col].max()
+                
+                # 2. Ghi đè nếu tiêu chí có nằm trong bảng BOUNDS_CONFIG
+                if col in BOUNDS_CONFIG:
+                    conf_min, conf_max = BOUNDS_CONFIG[col]
+                    if conf_min is not None: c_min = conf_min
+                    if conf_max is not None: c_max = conf_max
+                
+                # Nếu c_min bị lớn hơn c_max (do data lỗi), ép c_max = c_min để tránh chia số âm
+                if c_min > c_max: c_max = c_min
+                
+                # 3. Ép giá trị nhập vào không bị văng ra khỏi giới hạn (Clamp)
+                val_clamped = max(c_min, min(val, c_max))
+                
+                # 4. Áp dụng công thức
                 if c_max == c_min: return 1.0
-                return (c_max - val)/(c_max - c_min) if inv else (val - c_min)/(c_max - c_min)
+                if inv: 
+                    return (c_max - val_clamped) / (c_max - c_min)
+                else:
+                    return (val_clamped - c_min) / (c_max - c_min)
 
-            # Trọng số mặc định của Admin (Dùng để báo điểm tức thì cho Evaluator)
             W_BASE = {"XNK":0.12, "KhoiLuong":0.08, "Xe":0.10, "MuaVu":0.05, "KCN":0.10, "DanSo":0.05, "NongNghiep":0.05, "CaoToc":0.08, "DuongSat":0.07, "DaPhuongThuc":0.05, "ThongQuan":0.10, "PhoiHop":0.03, "DN_Log":0.07, "KhoLanh":0.05, "HaTangHoTro":0.05}
+            
+            # Khắc phục lỗi tổng trọng số 105% (Tự động ép về 100%)
+            total_w_base = sum(W_BASE.values())
             
             score = 0
             for key, weight in W_BASE.items():
                 is_inverse = True if key == "ThongQuan" else False
-                score += norm(key, new_record[key], is_inverse) * weight
+                score += norm(key, new_record[key], is_inverse) * (weight / total_w_base)
             
             final_score = round(score * 100, 1)
             new_record["Diem_Danh_Gia"] = final_score
@@ -166,7 +184,6 @@ elif menu == "Quản Trị Viên (Admin)":
         df = get_all_data()
         
         if not df.empty and "Diem_Danh_Gia" in df.columns:
-            # 1. TÍNH ĐIỂM TRUNG BÌNH CÁC LƯỢT ĐÁNH GIÁ
             st.subheader("1. Điểm Trung Bình Khách Quan (Thực tế)")
             df['Diem_Danh_Gia'] = pd.to_numeric(df['Diem_Danh_Gia'], errors='coerce')
             avg_scores = df.groupby('Gate')['Diem_Danh_Gia'].mean().round(1).reset_index()
@@ -174,7 +191,6 @@ elif menu == "Quản Trị Viên (Admin)":
             
             st.markdown("---")
             
-            # 2. MÔ PHỎNG VỚI 15 TRỌNG SỐ
             st.subheader("2. Khung Mô phỏng Chiến lược (Admin)")
             st.write("Kéo thanh trượt để thay đổi trọng số. Hệ thống tự động quy đổi tỷ lệ nếu tổng khác 100%.")
             
@@ -201,7 +217,6 @@ elif menu == "Quản Trị Viên (Admin)":
                 w['KhoLanh'] = st.slider("Kho lạnh (%)", 0, 50, 5)
                 w['HaTangHoTro'] = st.slider("Hạ tầng hỗ trợ (%)", 0, 50, 5)
 
-            # Auto-normalize weights
             total_w = sum(w.values())
             if total_w == 0: total_w = 1 
             
@@ -214,14 +229,32 @@ elif menu == "Quản Trị Viên (Admin)":
                     df_avg.loc[len(df_avg)] = [gate] + [0]*15
                     
             df_norm = pd.DataFrame({'Gate': df_avg['Gate']})
+            
+            # --- VÒNG LẶP CHUẨN HÓA LAI CHO ADMIN ---
             for col in COLUMNS[1:16]:
-                min_val, max_val = df_avg[col].min(), df_avg[col].max()
-                if max_val == min_val:
+                # 1. Quét Min-Max động
+                c_min, c_max = df_avg[col].min(), df_avg[col].max()
+                
+                # 2. Ghi đè Min-Max cố định
+                if col in BOUNDS_CONFIG:
+                    conf_min, conf_max = BOUNDS_CONFIG[col]
+                    if conf_min is not None: c_min = conf_min
+                    if conf_max is not None: c_max = conf_max
+                
+                if c_min > c_max: c_max = c_min
+                
+                # 3. Ép toàn bộ cột dữ liệu không vượt rào (Clip)
+                clamped_series = df_avg[col].clip(lower=c_min, upper=c_max)
+                
+                # 4. Chuẩn hóa đồng loạt
+                if c_max == c_min:
                     df_norm[col] = 1.0
                 else:
-                    df_norm[col] = (max_val - df_avg[col]) / (max_val - min_val) if col == "ThongQuan" else (df_avg[col] - min_val) / (max_val - min_val)
+                    if col == "ThongQuan":
+                        df_norm[col] = (c_max - clamped_series) / (c_max - c_min)
+                    else:
+                        df_norm[col] = (clamped_series - c_min) / (c_max - c_min)
             
-            # Tính điểm với trọng số đã quy đổi
             df_norm['Điểm Mô Phỏng'] = 0
             for col in COLUMNS[1:16]:
                 df_norm['Điểm Mô Phỏng'] += df_norm[col] * (w[col] / total_w)
