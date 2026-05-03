@@ -22,6 +22,18 @@ def get_all_data():
     except:
         return pd.DataFrame(columns=COLUMNS)
 
+#==================================
+# --- CẤU HÌNH MIN-MAX LAI (HYBRID BOUNDS) ---
+# Quy tắc: (Min_Cố_định, Max_Cố_định). Dùng chữ None nếu muốn quét động từ Google Sheet
+#==================================
+BOUNDS_CONFIG = {
+    "DanSo": (1.5, 5.0),          # Cố định cả Min và Max
+    "HaTangHoTro": (0, 1),        # Cố định cả Min và Max
+    "PhoiHop": (0, 1),            # Cố định cả Min và Max
+    "DaPhuongThuc": (0, 1),       # Cố định cả Min và Max
+    "MuaVu": (0.0, 1.0),          # Cố định cả Min và Max
+    "ThongQuan": (24.0, None)     # Cố định Min 24h, Max để None (Hệ thống tự quét)
+}
 # --- CƠ SỞ DỮ LIỆU ẢNH ---
 gate_info = {
     "Hữu Nghị": {"mieu_ta": "Cửa khẩu Quốc tế Hữu Nghị (Lạng Sơn)...", "anh_url": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80"},
