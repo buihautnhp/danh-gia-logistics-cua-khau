@@ -32,7 +32,7 @@ BOUNDS_CONFIG = {
     "PhoiHop": (0, 1),            # Cố định cả Min và Max
     "DaPhuongThuc": (0, 1),       # Cố định cả Min và Max
     "MuaVu": (0.0, 1.0),          # Cố định cả Min và Max
-    "ThongQuan": (24.0, None)     # Cố định Min 24h, Max tự quét từ Sheet
+    "ThongQuan": (1.0, None)     # Cố định Min 24h, Max tự quét từ Sheet
 }
 
 # --- CƠ SỞ DỮ LIỆU ẢNH ---
