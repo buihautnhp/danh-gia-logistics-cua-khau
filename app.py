@@ -24,32 +24,73 @@ def get_all_data():
 
 # ==========================================
 # CẤU HÌNH MIN-MAX LAI (HYBRID BOUNDS)
-# (Min, Max). Dùng None nếu muốn hệ thống tự quét trên Google Sheet
 # ==========================================
 BOUNDS_CONFIG = {
-    "DanSo": (1.5, 5.0),          # Cố định cả Min và Max
-    "HaTangHoTro": (0, 1),        # Cố định cả Min và Max
-    "PhoiHop": (0, 1),            # Cố định cả Min và Max
-    "DaPhuongThuc": (0, 1),       # Cố định cả Min và Max
-    "MuaVu": (0.0, 1.0),          # Cố định cả Min và Max
-    "ThongQuan": (4.0, None)     # Cố định Min 24h, Max tự quét từ Sheet
+    "DanSo": (1.5, 5.0),          
+    "HaTangHoTro": (0, 1),        
+    "PhoiHop": (0, 1),            
+    "DaPhuongThuc": (0, 1),       
+    "MuaVu": (0.0, 1.0),          
+    "ThongQuan": (4.0, None)     # Min lý tưởng là 4h
 }
+
+# TRỌNG SỐ MẶC ĐỊNH CHUNG
+W_BASE = {"XNK":0.12, "KhoiLuong":0.08, "Xe":0.10, "MuaVu":0.05, "KCN":0.10, "DanSo":0.05, "NongNghiep":0.05, "CaoToc":0.08, "DuongSat":0.07, "DaPhuongThuc":0.05, "ThongQuan":0.10, "PhoiHop":0.03, "DN_Log":0.07, "KhoLanh":0.05, "HaTangHoTro":0.05}
+total_w_base = sum(W_BASE.values())
 
 # --- CƠ SỞ DỮ LIỆU ẢNH ---
 gate_info = {
-    "Hữu Nghị": {"mieu_ta": "Cửa khẩu Quốc tế Hữu Nghị (Lạng Sơn)...", "anh_url": "https://i.postimg.cc/x1y6R5mN/Huu-Nghi.jpg"},
-    "Lào Cai": {"mieu_ta": "Cửa khẩu Quốc tế Kim Thành (Lào Cai)...", "anh_url": "https://i.postimg.cc/jSQMXcfz/Lao-Cai.png"},
-    "Móng Cái": {"mieu_ta": "Cửa khẩu Quốc tế Móng Cái (Quảng Ninh)...", "anh_url": "https://i.postimg.cc/dVm5B6Cr/Mong-Cai.jpg"},
-    "Tân Thanh": {"mieu_ta": "Cửa khẩu phụ Tân Thanh (Lạng Sơn)...", "anh_url": "https://i.postimg.cc/nhY3k2m4/Tan-Thanh.jpg"}
+    "Hữu Nghị": {"mieu_ta": "Cửa khẩu Quốc tế Hữu Nghị (Lạng Sơn)...", "anh_url": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80"},
+    "Lào Cai": {"mieu_ta": "Cửa khẩu Quốc tế Kim Thành (Lào Cai)...", "anh_url": "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80"},
+    "Móng Cái": {"mieu_ta": "Cửa khẩu Quốc tế Móng Cái (Quảng Ninh)...", "anh_url": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80"},
+    "Tân Thanh": {"mieu_ta": "Cửa khẩu phụ Tân Thanh (Lạng Sơn)...", "anh_url": "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?auto=format&fit=crop&w=800&q=80"}
 }
 
-st.title("Hệ thống Đánh giá 15 Chỉ số Logistics Cửa khẩu")
-menu = st.sidebar.radio("Vai trò:", ["Người Đánh Giá", "Quản Trị Viên (Admin)"])
+# ==========================================
+# MENU ĐIỀU HƯỚNG
+# ==========================================
+st.sidebar.title("Hệ thống Mô phỏng")
+menu = st.sidebar.radio("Chức năng:", [
+    "1. Trang chủ (Giới thiệu)", 
+    "2. Đánh giá Cửa khẩu", 
+    "3. Xem bảng điểm chi tiết", 
+    "4. Quản trị viên (Admin)"
+])
 
 # ==========================================
-# TAB 1: NGƯỜI ĐÁNH GIÁ (EVALUATOR)
+# TRANG 1: TRANG CHỦ (GIỚI THIỆU)
 # ==========================================
-if menu == "Người Đánh Giá":
+if menu == "1. Trang chủ (Giới thiệu)":
+    st.title("Đánh giá Tiềm năng Phát triển Trung tâm Logistics Cửa khẩu Quốc tế Đường bộ")
+    st.image("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80", use_container_width=True)
+    
+    st.header("🎯 Mục tiêu & Nhiệm vụ của Website")
+    st.markdown("""
+    Hệ thống này được xây dựng như một **Mô hình Hỗ trợ Ra quyết định (DSS)** dựa trên phương pháp Đánh giá Đa tiêu chí (MCDM). 
+    *   **Mục tiêu:** Định lượng hóa và xếp hạng tiềm năng phát triển của 4 cụm cửa khẩu trọng điểm phía Bắc (Hữu Nghị, Lào Cai, Móng Cái, Tân Thanh) thành các trung tâm logistics mang tầm quốc tế.
+    *   **Chức năng:** Cho phép các chuyên gia, nhà quản lý nhập liệu đánh giá thực tế. Hệ thống sẽ tự động chuẩn hóa dữ liệu (Min-Max) và tổng hợp kết quả theo thời gian thực dựa trên bộ 15 tiêu chí cốt lõi.
+    """)
+    
+    st.header("📖 Giải thích thuật ngữ chuyên môn")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info("""
+        **1. Dòng hàng (Trade Flow) là gì?**
+        Là nhóm chỉ số phản ánh quy mô, sức mạnh và sự ổn định của lượng hàng hóa giao thương đi qua cửa khẩu. 
+        Một trung tâm logistics không thể phát triển nếu không có dòng hàng đủ lớn để nuôi dưỡng các dịch vụ lưu kho, bốc xếp, và vận tải. Nhóm này bao gồm: Kim ngạch XNK, Khối lượng hàng, và Số lượng phương tiện.
+        """)
+    with col2:
+        st.success("""
+        **2. Độ mùa vụ (Seasonality) là gì?**
+        Là hệ số (từ 0 đến 1) đánh giá tính ổn định của dòng hàng trong năm. 
+        *   Gần **1.0**: Hàng hóa lưu thông đều đặn quanh năm (Ví dụ: linh kiện điện tử, máy móc). Tốt cho đầu tư logistics lâu dài.
+        *   Gần **0.0**: Hàng hóa ồ ạt đổ về trong một thời gian cực ngắn (Ví dụ: Vụ thu hoạch vải thiều, thanh long) gây ùn tắc, sau đó lại vắng vẻ. Gây rủi ro cho nhà đầu tư kho bãi.
+        """)
+
+# ==========================================
+# TRANG 2: ĐÁNH GIÁ CỬA KHẨU (EVALUATOR)
+# ==========================================
+elif menu == "2. Đánh giá Cửa khẩu":
     st.header("Thu thập Dữ liệu & Đánh giá Tức thì")
     
     selected_gate = st.selectbox("📌 Chọn cửa khẩu đánh giá:", gates)
@@ -59,34 +100,6 @@ if menu == "Người Đánh Giá":
     with col_text:
         st.subheader(f"Cửa khẩu {selected_gate}")
         st.write(gate_info[selected_gate]["mieu_ta"])
-    
-    with st.expander("📖 XEM HƯỚNG DẪN & ĐỊNH NGHĨA 15 CHỈ SỐ (Click để mở rộng)"):
-        st.markdown("""
-        **I. Dòng hàng (Trade Flow)**
-        - **Kim ngạch XNK (USD):** Tổng xuất + nhập. 
-        - **Khối lượng (Tấn):** Tổng tấn hàng qua cửa khẩu.
-        - **Số xe/ngày:** Lưu lượng xe chở hàng trung bình.
-        - **Độ mùa vụ (0-1):** 1 = Ổn định quanh năm; 0 = Tập trung cao điểm.
-        
-        **II. Hậu phương kinh tế (Hinterland)**
-        - **Diện tích KCN (ha):** Tổng diện tích KCN chính vùng ảnh hưởng.
-        - **Dân số (Triệu người):** Dân số bán kính 100-150km.
-        - **Nông nghiệp (Điểm):** Quy mô hàng nông sản vùng lân cận.
-        
-        **III. Kết nối hạ tầng (Connectivity)**
-        - **Đường cao tốc/QL (km):** Chiều dài đường đến vùng kinh tế.
-        - **Đường sắt (km):** Đường sắt nối trực tiếp.
-        - **Đa phương thức (0-1):** Có ICD, cảng biển hỗ trợ (1=Có, 0=Không).
-        
-        **IV. Thể chế & Quản lý (Institutional)**
-        - **Thời gian thông quan (giờ):** Càng nhỏ càng tốt.
-        - **Cơ chế phối hợp (0-1):** Một cửa, kiểm dịch chung (1=Có, 0=Không).
-        
-        **V. Hệ sinh thái (Ecosystem)**
-        - **Số DN Logistics:** Số DN dịch vụ trên địa bàn.
-        - **Kho lạnh (Tấn):** Tổng công suất kho lạnh.
-        - **Hạ tầng hỗ trợ (0-1):** Bãi trung chuyển, kho ngoại quan (1=Có, 0=Không).
-        """)
 
     with st.form("form_15_criteria", clear_on_submit=True):
         st.write("### Nhập liệu các chỉ số định lượng")
@@ -98,7 +111,7 @@ if menu == "Người Đánh Giá":
             xe = st.number_input("Số xe/ngày", value=300)
             muavu = st.slider("Độ mùa vụ (0-1)", 0.0, 1.0, 0.8)
             st.markdown("**4. Thể chế**")
-            tq = st.number_input("TG Thông quan (Giờ)", value=48.0)
+            tq = st.number_input("TG Thông quan (Giờ)", value=24.0)
             phoihop = st.selectbox("Cơ chế một cửa (1=Có, 0=Không)", [1, 0])
         with c2:
             st.markdown("**2. Hậu phương**")
@@ -131,35 +144,21 @@ if menu == "Người Đánh Giá":
             df_temp = pd.concat([df_old, pd.DataFrame([new_record])], ignore_index=True)
             for col in COLUMNS[1:16]: df_temp[col] = pd.to_numeric(df_temp[col], errors='coerce').fillna(0)
             
-            # --- HÀM CHUẨN HÓA LAI (HYBRID) CHO NGƯỜI ĐÁNH GIÁ ---
             def norm(col, val, inv=False):
-                # 1. Quét Min-Max động từ Sheet làm mặc định
                 c_min, c_max = df_temp[col].min(), df_temp[col].max()
-                
-                # 2. Ghi đè nếu tiêu chí có nằm trong bảng BOUNDS_CONFIG
                 if col in BOUNDS_CONFIG:
                     conf_min, conf_max = BOUNDS_CONFIG[col]
                     if conf_min is not None: c_min = conf_min
                     if conf_max is not None: c_max = conf_max
-                
-                # Nếu c_min bị lớn hơn c_max (do data lỗi), ép c_max = c_min để tránh chia số âm
                 if c_min > c_max: c_max = c_min
-                
-                # 3. Ép giá trị nhập vào không bị văng ra khỏi giới hạn (Clamp)
                 val_clamped = max(c_min, min(val, c_max))
                 
-                # 4. Áp dụng công thức
                 if c_max == c_min: return 1.0
                 if inv: 
                     return (c_max - val_clamped) / (c_max - c_min)
                 else:
                     return (val_clamped - c_min) / (c_max - c_min)
 
-            W_BASE = {"XNK":0.12, "KhoiLuong":0.08, "Xe":0.10, "MuaVu":0.05, "KCN":0.10, "DanSo":0.05, "NongNghiep":0.05, "CaoToc":0.08, "DuongSat":0.07, "DaPhuongThuc":0.05, "ThongQuan":0.10, "PhoiHop":0.03, "DN_Log":0.07, "KhoLanh":0.05, "HaTangHoTro":0.05}
-            
-            # Khắc phục lỗi tổng trọng số 105% (Tự động ép về 100%)
-            total_w_base = sum(W_BASE.values())
-            
             score = 0
             for key, weight in W_BASE.items():
                 is_inverse = True if key == "ThongQuan" else False
@@ -175,24 +174,68 @@ if menu == "Người Đánh Giá":
             st.success(f"🎉 Xuất sắc! Điểm của {selected_gate} ở lượt đánh giá này là: {final_score}/100 điểm")
 
 # ==========================================
-# TAB 2: QUẢN TRỊ VIÊN (ADMIN) 
+# TRANG 3: XEM BẢNG ĐIỂM CHI TIẾT (NGƯỜI DÙNG)
 # ==========================================
-elif menu == "Quản Trị Viên (Admin)":
+elif menu == "3. Xem bảng điểm chi tiết":
+    st.header("Bảng Phân Tích Điểm Số Chi Tiết")
+    st.write("Trang này hiển thị điểm chi tiết của từng tiêu chí (dựa trên mức trọng số mặc định của hệ thống). Kết quả này được tổng hợp và lấy trung bình từ tất cả các lượt đánh giá.")
+    
+    df = get_all_data()
+    
+    if df.empty or "Diem_Danh_Gia" not in df.columns:
+        st.info("Hệ thống chưa có dữ liệu đánh giá nào.")
+    else:
+        for col in COLUMNS[1:16]:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+        df_avg = df.groupby('Gate')[COLUMNS[1:16]].mean().reset_index()
+        for gate in gates:
+            if gate not in df_avg['Gate'].values:
+                df_avg.loc[len(df_avg)] = [gate] + [0]*15
+                
+        df_detailed_scores = pd.DataFrame({'Cửa khẩu': df_avg['Gate']})
+        
+        # Tính điểm chi tiết từng cấu phần (Điểm = Giá trị chuẩn hóa * Trọng số * 100)
+        for col in COLUMNS[1:16]:
+            c_min, c_max = df_avg[col].min(), df_avg[col].max()
+            if col in BOUNDS_CONFIG:
+                conf_min, conf_max = BOUNDS_CONFIG[col]
+                if conf_min is not None: c_min = conf_min
+                if conf_max is not None: c_max = conf_max
+            if c_min > c_max: c_max = c_min
+            
+            clamped_series = df_avg[col].clip(lower=c_min, upper=c_max)
+            
+            norm_series = pd.Series(1.0, index=df_avg.index)
+            if c_max > c_min:
+                if col == "ThongQuan":
+                    norm_series = (c_max - clamped_series) / (c_max - c_min)
+                else:
+                    norm_series = (clamped_series - c_min) / (c_max - c_min)
+            
+            # Tính điểm đóng góp của riêng tiêu chí này vào tổng 100 điểm
+            df_detailed_scores[col] = (norm_series * (W_BASE[col] / total_w_base) * 100).round(2)
+        
+        # Thêm cột Tổng điểm
+        df_detailed_scores['TỔNG ĐIỂM'] = df_detailed_scores[COLUMNS[1:16]].sum(axis=1).round(1)
+        
+        st.markdown("### Bảng phân rã điểm số theo 15 tiêu chí (Thang điểm 100)")
+        st.dataframe(df_detailed_scores.set_index('Cửa khẩu'), use_container_width=True)
+        
+        st.markdown("### Biểu đồ Xếp hạng Tổng điểm (Trọng số cố định)")
+        st.bar_chart(data=df_detailed_scores.set_index('Cửa khẩu')['TỔNG ĐIỂM'])
+
+# ==========================================
+# TRANG 4: QUẢN TRỊ VIÊN (ADMIN) 
+# ==========================================
+elif menu == "4. Quản trị viên (Admin)":
     pwd = st.sidebar.text_input("Mật khẩu:", type="password")
     if pwd == "admin123":
-        st.header("Báo cáo Trung bình & Mô phỏng")
+        st.header("Khung Mô phỏng Chiến lược (Admin)")
         df = get_all_data()
         
         if not df.empty and "Diem_Danh_Gia" in df.columns:
-            st.subheader("1. Điểm Trung Bình Khách Quan (Thực tế)")
-            df['Diem_Danh_Gia'] = pd.to_numeric(df['Diem_Danh_Gia'], errors='coerce')
-            avg_scores = df.groupby('Gate')['Diem_Danh_Gia'].mean().round(1).reset_index()
-            st.bar_chart(data=avg_scores.set_index('Gate')['Diem_Danh_Gia'])
-            
-            st.markdown("---")
-            
-            st.subheader("2. Khung Mô phỏng Chiến lược (Admin)")
-            st.write("Kéo thanh trượt để thay đổi trọng số. Hệ thống tự động quy đổi tỷ lệ nếu tổng khác 100%.")
+            st.write("Tại đây, quyền quản trị viên cho phép bạn thay đổi trọng số để quan sát sự biến động của bảng xếp hạng.")
             
             w = {}
             tabs = st.tabs(["Dòng hàng", "Hậu phương", "Kết nối", "Thể chế", "Sinh thái"])
@@ -230,23 +273,16 @@ elif menu == "Quản Trị Viên (Admin)":
                     
             df_norm = pd.DataFrame({'Gate': df_avg['Gate']})
             
-            # --- VÒNG LẶP CHUẨN HÓA LAI CHO ADMIN ---
             for col in COLUMNS[1:16]:
-                # 1. Quét Min-Max động
                 c_min, c_max = df_avg[col].min(), df_avg[col].max()
-                
-                # 2. Ghi đè Min-Max cố định
                 if col in BOUNDS_CONFIG:
                     conf_min, conf_max = BOUNDS_CONFIG[col]
                     if conf_min is not None: c_min = conf_min
                     if conf_max is not None: c_max = conf_max
-                
                 if c_min > c_max: c_max = c_min
                 
-                # 3. Ép toàn bộ cột dữ liệu không vượt rào (Clip)
                 clamped_series = df_avg[col].clip(lower=c_min, upper=c_max)
                 
-                # 4. Chuẩn hóa đồng loạt
                 if c_max == c_min:
                     df_norm[col] = 1.0
                 else:
@@ -262,3 +298,6 @@ elif menu == "Quản Trị Viên (Admin)":
             
             df_norm = df_norm.set_index('Gate').reindex(gates).reset_index()
             st.bar_chart(data=df_norm.set_index('Gate')['Điểm Mô Phỏng'])
+            
+            st.markdown("### Dữ liệu thô trên Hệ thống")
+            st.dataframe(df)
