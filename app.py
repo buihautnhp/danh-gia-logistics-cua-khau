@@ -38,7 +38,7 @@ BOUNDS_CONFIG = {
 W_BASE = {"XNK":0.12, "KhoiLuong":0.08, "Xe":0.10, "MuaVu":0.05, "KCN":0.10, "DanSo":0.05, "NongNghiep":0.05, "CaoToc":0.08, "DuongSat":0.07, "DaPhuongThuc":0.05, "ThongQuan":0.10, "PhoiHop":0.03, "DN_Log":0.07, "KhoLanh":0.05, "HaTangHoTro":0.05}
 total_w_base = sum(W_BASE.values())
 
-# --- CƠ SỞ DỮ LIỆU ẢNH ---
+# --- CƠ SỞ DỮ LIỆU ẢNH (ĐÃ ĐỒNG BỘ POSTIMAGES) ---
 gate_info = {
     "Hữu Nghị": {"mieu_ta": "Cửa khẩu Quốc tế Hữu Nghị (Lạng Sơn)...", "anh_url": "https://i.postimg.cc/x1y6R5mN/Huu-Nghi.jpg"},
     "Lào Cai": {"mieu_ta": "Cửa khẩu Quốc tế Kim Thành (Lào Cai)...", "anh_url": "https://i.postimg.cc/jSQMXcfz/Lao-Cai.png"},
@@ -62,7 +62,8 @@ menu = st.sidebar.radio("Chức năng:", [
 # ==========================================
 if menu == "1. Trang chủ (Giới thiệu)":
     st.title("Đánh giá Tiềm năng Phát triển Trung tâm Logistics Cửa khẩu Quốc tế Đường bộ")
-    st.image("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80", use_container_width=True)
+    # Đã thay ảnh bìa bằng link cố định của Hữu Nghị
+    st.image("https://i.postimg.cc/x1y6R5mN/Huu-Nghi.jpg", use_container_width=True)
     
     st.header("🎯 Mục tiêu & Nhiệm vụ của Website")
     st.markdown("""
@@ -100,6 +101,34 @@ elif menu == "2. Đánh giá Cửa khẩu":
     with col_text:
         st.subheader(f"Cửa khẩu {selected_gate}")
         st.write(gate_info[selected_gate]["mieu_ta"])
+
+    with st.expander("📖 XEM HƯỚNG DẪN & ĐỊNH NGHĨA 15 CHỈ SỐ (Click để mở rộng)"):
+        st.markdown("""
+        **I. Dòng hàng (Trade Flow)**
+        - **Kim ngạch XNK (USD):** Tổng xuất + nhập. 
+        - **Khối lượng (Tấn):** Tổng tấn hàng qua cửa khẩu.
+        - **Số xe/ngày:** Lưu lượng xe chở hàng trung bình.
+        - **Độ mùa vụ (0-1):** 1 = Ổn định quanh năm; 0 = Tập trung cao điểm.
+        
+        **II. Hậu phương kinh tế (Hinterland)**
+        - **Diện tích KCN (ha):** Tổng diện tích KCN chính vùng ảnh hưởng.
+        - **Dân số (Triệu người):** Dân số bán kính 100-150km.
+        - **Nông nghiệp (Điểm):** Quy mô hàng nông sản vùng lân cận.
+        
+        **III. Kết nối hạ tầng (Connectivity)**
+        - **Đường cao tốc/QL (km):** Chiều dài đường đến vùng kinh tế.
+        - **Đường sắt (km):** Đường sắt nối trực tiếp.
+        - **Đa phương thức (0-1):** Có ICD, cảng biển hỗ trợ (1=Có, 0=Không).
+        
+        **IV. Thể chế & Quản lý (Institutional)**
+        - **Thời gian thông quan (giờ):** Càng nhỏ càng tốt.
+        - **Cơ chế phối hợp (0-1):** Một cửa, kiểm dịch chung (1=Có, 0=Không).
+        
+        **V. Hệ sinh thái (Ecosystem)**
+        - **Số DN Logistics:** Số DN dịch vụ trên địa bàn.
+        - **Kho lạnh (Tấn):** Tổng công suất kho lạnh.
+        - **Hạ tầng hỗ trợ (0-1):** Bãi trung chuyển, kho ngoại quan (1=Có, 0=Không).
+        """)
 
     with st.form("form_15_criteria", clear_on_submit=True):
         st.write("### Nhập liệu các chỉ số định lượng")
@@ -195,7 +224,6 @@ elif menu == "3. Xem bảng điểm chi tiết":
                 
         df_detailed_scores = pd.DataFrame({'Cửa khẩu': df_avg['Gate']})
         
-        # Tính điểm chi tiết từng cấu phần (Điểm = Giá trị chuẩn hóa * Trọng số * 100)
         for col in COLUMNS[1:16]:
             c_min, c_max = df_avg[col].min(), df_avg[col].max()
             if col in BOUNDS_CONFIG:
@@ -213,10 +241,8 @@ elif menu == "3. Xem bảng điểm chi tiết":
                 else:
                     norm_series = (clamped_series - c_min) / (c_max - c_min)
             
-            # Tính điểm đóng góp của riêng tiêu chí này vào tổng 100 điểm
             df_detailed_scores[col] = (norm_series * (W_BASE[col] / total_w_base) * 100).round(2)
         
-        # Thêm cột Tổng điểm
         df_detailed_scores['TỔNG ĐIỂM'] = df_detailed_scores[COLUMNS[1:16]].sum(axis=1).round(1)
         
         st.markdown("### Bảng phân rã điểm số theo 15 tiêu chí (Thang điểm 100)")
